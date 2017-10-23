@@ -1,5 +1,6 @@
 # Photoshop Export Layers to PNG Faster
 This script exports layers of your Photoshop document as separate PNG files very fast.
+![Dialog](export-to-png.png)
 ## Features
 1. Export all layers or visible only
 2. Select the export path or use default (near you PS document)
