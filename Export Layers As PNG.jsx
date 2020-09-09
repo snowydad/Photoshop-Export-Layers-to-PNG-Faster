@@ -158,9 +158,8 @@ function exportFiles(path, pathSame, removeHidden, trim, borders, bordersValue, 
     doc2Layers = activeDocument.artLayers;
     doc2LayersLength = activeDocument.artLayers.length;
     }
-    
-    // hide all layers
-    hideAllLayers();
+     //hide all layers
+    //hideAllLayers();
     //Create forlder for the same path:
     if(pathSame){
         var saveToFolder = new Folder(doc.path + "/Export_" + doc.name);
@@ -174,8 +173,10 @@ function exportFiles(path, pathSame, removeHidden, trim, borders, bordersValue, 
     pngSaveOptions.compression = 9;
     // Save files:
     for (i = 0; i < doc2LayersLength; i++){
+        hideAllLayers();
         doc2Layers[i].visible = true;
         if(trim){
+            // save history snapshot
             doc2Layers[i].rasterize(RasterizeType.ENTIRELAYER); // lifehack for smart objects
             doc2.trim (TrimType.TRANSPARENT);
             if(borders){
@@ -192,11 +193,14 @@ function exportFiles(path, pathSame, removeHidden, trim, borders, bordersValue, 
         }
         var saveToFile = new File (path + "/" + doc2Layers[i].name + ".png"); // file name and path        
         doc2.saveAs (saveToFile, pngSaveOptions, true, Extension.LOWERCASE); // save a copy
-        doc2Layers[i].visible = false;
-        exportedFiles++;
+        //doc2Layers[i].visible = false;
+        //exportedFiles++;
         if(trim){
-            doc2.resizeCanvas (doc.width.value, doc.height.value) // restore size
+            // restore snapshot history if trimmed
+            doc2.activeHistoryState = doc2.historyStates[1]         
         }
+        //doc2Layers[i].visible = false;
+        exportedFiles++;
     }
 
     app.activeDocument.close(SaveOptions.DONOTSAVECHANGES)
@@ -209,7 +213,7 @@ if (app.documents.length >0){
     var docPathName = app.activeDocument.path.fsName;
     var pathToExportCurrent = doc.path 
     var pathToExportSelected;
-    var pathToExport = pathToExportCurrent// + "/Export_" + doc.name + "/"; // default path to export
+    var pathToExport = pathToExportCurrent;
     
     createMainForm ();
     
