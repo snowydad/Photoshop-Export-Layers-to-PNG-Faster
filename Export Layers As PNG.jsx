@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright 2017. Aliasworlds. All rights reserved.
 //
 // This script exports layers as separate PNG files.
@@ -102,7 +102,20 @@ function createMainForm(){
     editTrimBorder.enabled = false;
     editTrimBorder.characters = 2
     var checkTrimRound = optionsPanel.add('checkbox', undefined,"Round to even");
-
+     //-----------------------------------------------------------------------------
+    var positionPanel = form.add("panel", undefined, "Position")
+    positionPanel.alignment = 'fill';
+    positionPanel.alignChildren = 'left';
+    positionPanel.spacing = 0
+    positionPanel.margins.top = 16
+    
+    var positionGroup = positionPanel.add('group')
+    selectPathGroup.orientation = 'row'
+    var exportPosition = positionGroup.add('checkbox', undefined,"Export position (top left)");
+    var exportPositionCenter = positionGroup.add('checkbox', undefined,"From center");
+    exportPositionCenter.enabled = false;
+     //-----------------------------------------------------------------------------
+     
     var btnRun = form.add ('button', undefined, "Run")
     btnRun.bounds = [0,0,100,40]
     var btnCancel = form.add ('button', undefined, "Cancel")
@@ -118,10 +131,13 @@ function createMainForm(){
             checkTrimBorder.enabled = checkTrim.value;
             editTrimBorder.enabled = checkTrim.value;   
     }
+    exportPosition.onClick = function(){
+            exportPositionCenter.enabled = exportPosition.value;
+    }
     btnSelectPath.onClick = function(){
         checkPathSame.value = false;
         checkPathSelected.value = true;
-        pathToExportSelected = Folder.selectDialog ('Salect an Album Folder with PSD images');
+        pathToExportSelected = Folder.selectDialog ('Salect Destination');
         if (pathToExportSelected != null){
             pathExport.text = pathToExportSelected.fsName;
             pathToExport = pathToExportSelected;
@@ -129,7 +145,7 @@ function createMainForm(){
     }
     btnRun.onClick = function(){
         form.close();
-        exportFiles(pathToExport, checkPathSame.value, checkLayersVisible.value, checkTrim.value, checkTrimBorder.value, editTrimBorder.text, checkTrimRound.value);
+        exportFiles(pathToExport, checkPathSame.value, checkLayersVisible.value, checkTrim.value, checkTrimBorder.value, editTrimBorder.text, checkTrimRound.value, exportPosition.value, exportPositionCenter.value);
     }
     
     form.show()
@@ -137,13 +153,14 @@ function createMainForm(){
 ///////////////////////////////////////////////////////////////////////////////
 // Export files:
 ///////////////////////////////////////////////////////////////////////////////
-function exportFiles(path, pathSame, removeHidden, trim, borders, bordersValue, round){
+function exportFiles(path, pathSame, removeHidden, trim, borders, bordersValue, round, saveINI, centered){
     var start = new Date;
     var exportedFiles = 0;
     app.activeDocument.duplicate();
     var doc2 = activeDocument;
     var doc2Layers = activeDocument.artLayers;
     var doc2LayersLength = activeDocument.artLayers.length;
+    var positionArray = [];
     //app.runMenuItem(stringIDToTypeID('selectNoLayers'));
     
     // delete hidden layers:
@@ -158,8 +175,7 @@ function exportFiles(path, pathSame, removeHidden, trim, borders, bordersValue, 
     doc2Layers = activeDocument.artLayers;
     doc2LayersLength = activeDocument.artLayers.length;
     }
-     //hide all layers
-    //hideAllLayers();
+
     //Create forlder for the same path:
     if(pathSame){
         var saveToFolder = new Folder(doc.path + "/Export_" + doc.name);
@@ -167,14 +183,31 @@ function exportFiles(path, pathSame, removeHidden, trim, borders, bordersValue, 
         path = saveToFolder;
         //alert(path)
     }
+    
     // Set png options
     var pngSaveOptions = new PNGSaveOptions();
     pngSaveOptions.interlaces = false;
     pngSaveOptions.compression = 9;
+    
     // Save files:
     for (i = 0; i < doc2LayersLength; i++){
         hideAllLayers();
         doc2Layers[i].visible = true;
+        
+        // calc centers
+        if(saveINI){
+            var layerCenterX = (doc2Layers[i].bounds[2] - doc2Layers[i].bounds[0])/2 + doc2Layers[i].bounds[0];
+            var layerCenterY = (doc2Layers[i].bounds[3] - doc2Layers[i].bounds[1])/2 + doc2Layers[i].bounds[1];
+            if(centered){
+                layerCenterX = layerCenterX - doc2.width/2;
+                layerCenterY = layerCenterY - doc2.height/2;
+            }
+            layerCenterX = Math.round (layerCenterX.value);
+            layerCenterY = Math.round (layerCenterY.value);
+            var deep = doc2LayersLength - i
+            positionArray.push ('['+doc2Layers[i].name+']' + '\n' + 'deep = '+deep + '\n' +'position = '+ layerCenterX+', '+layerCenterY + '\n\n');
+        }
+                                                
         if(trim){
             // save history snapshot
             doc2Layers[i].rasterize(RasterizeType.ENTIRELAYER); // lifehack for smart objects
@@ -201,6 +234,14 @@ function exportFiles(path, pathSame, removeHidden, trim, borders, bordersValue, 
         }
         //doc2Layers[i].visible = false;
         exportedFiles++;
+    }
+
+    // Save INI:
+    if(saveINI){
+        var iniFile = new File (path + "/" + "Positions" + ".ini"); // file name and path        
+        iniFile.open('w');
+        iniFile.write(positionArray.join(''));
+        iniFile.close();
     }
 
     app.activeDocument.close(SaveOptions.DONOTSAVECHANGES)
